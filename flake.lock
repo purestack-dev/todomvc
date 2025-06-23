@@ -49,6 +49,22 @@
         "type": "github"
       }
     },
+    "package-sets": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1750577700,
+        "narHash": "sha256-O2yPcwTqiOl/GcJSykwEfiy1EPKde4/EM3XuEvNWcO4=",
+        "owner": "purescript",
+        "repo": "package-sets",
+        "rev": "9c76f35a27cc266b1f0fdbd151eb4a5859e30540",
+        "type": "github"
+      },
+      "original": {
+        "owner": "purescript",
+        "repo": "package-sets",
+        "type": "github"
+      }
+    },
     "purescript-overlay": {
       "inputs": {
         "flake-compat": "flake-compat",
@@ -71,11 +87,28 @@
         "type": "github"
       }
     },
+    "registry": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1750577695,
+        "narHash": "sha256-Jv4PUe54RtwKwQaxr1ABQu2o1/+nkqYcV88CAB9zAhQ=",
+        "owner": "purescript",
+        "repo": "registry",
+        "rev": "45fc747d4d0f006b19775f9013642ed8c62d5465",
+        "type": "github"
+      },
+      "original": {
+        "owner": "purescript",
+        "repo": "registry",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
-        "purescript-overlay": "purescript-overlay"
+        "purescript-overlay": "purescript-overlay",
+        "spago-nix": "spago-nix"
       }
     },
     "slimlock": {
@@ -96,6 +129,25 @@
       "original": {
         "owner": "thomashoneyman",
         "repo": "slimlock",
+        "type": "github"
+      }
+    },
+    "spago-nix": {
+      "inputs": {
+        "package-sets": "package-sets",
+        "registry": "registry"
+      },
+      "locked": {
+        "lastModified": 1750694836,
+        "narHash": "sha256-QxWjqgH4NapAYOCf7DG1t4G0aNO6sYgXZj+r8RAaIPA=",
+        "owner": "purestack-dev",
+        "repo": "spago-nix",
+        "rev": "e0c303a269fee603809f458dfb62db974d573968",
+        "type": "github"
+      },
+      "original": {
+        "owner": "purestack-dev",
+        "repo": "spago-nix",
         "type": "github"
       }
     },

@@ -6,8 +6,9 @@
       url = "github:thomashoneyman/purescript-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    spago-nix.url = "github:purestack-dev/spago-nix";
   };
-  outputs = { self, nixpkgs, flake-utils, purescript-overlay }:
+  outputs = { self, nixpkgs, flake-utils, purescript-overlay, spago-nix }:
     let supportedSystems = flake-utils.lib.defaultSystems;
     in flake-utils.lib.eachSystem supportedSystems (system:
       let
@@ -32,6 +33,16 @@
           };
         });
       in {
+        packages = {
+          frontend = spago-nix.lib.spago { inherit pkgs; } {
+            src = ./.;
+            main = "Frontend";
+          };
+          backend = spago-nix.lib.spago { inherit pkgs; } {
+            src = ./.;
+            main = "Backend";
+          };
+        };
         apps = {
           dev = {
             type = "app";
