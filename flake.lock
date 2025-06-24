@@ -138,11 +138,11 @@
         "registry": "registry"
       },
       "locked": {
-        "lastModified": 1750694836,
-        "narHash": "sha256-QxWjqgH4NapAYOCf7DG1t4G0aNO6sYgXZj+r8RAaIPA=",
+        "lastModified": 1750748667,
+        "narHash": "sha256-7RYmZu/q2zfGuYT0O57wXfS9/PDaHF86Kh7BDURDAZ8=",
         "owner": "purestack-dev",
         "repo": "spago-nix",
-        "rev": "e0c303a269fee603809f458dfb62db974d573968",
+        "rev": "cf33c40bf9174c4ce58637f5d882eef23ac3d3f5",
         "type": "github"
       },
       "original": {
