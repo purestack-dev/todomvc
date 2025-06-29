@@ -23,7 +23,7 @@ type Plum msg model =
   , view :: model -> UI msg Unit
   }
 
-run :: forall msg model. String -> Plum msg model -> Effect Unit
+run :: forall @model @msg. String -> Plum msg model -> Effect Unit
 run id plum = do
   Web.window >>= Web.document >>= Web.getElementById id <<< Web.toNonElementParentNode >>= case _ of
     Just element -> do

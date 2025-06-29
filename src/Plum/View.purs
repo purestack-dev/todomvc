@@ -54,9 +54,12 @@ module Plum.View
   , onHover
   , onMouseDown
   , font
+  , fontColor
   , fontSize
   , fontWeight
   , onClick
+  , onPress
+  , onKey
   ) where
 
 import Prelude
@@ -88,8 +91,10 @@ import Web.DOM.Element as Element
 import Web.DOM.ParentNode (firstElementChild)
 import Web.Event.Event (Event)
 import Web.Event.Event as Event
-import Web.UIEvent.InputEvent as InputEvent
 import Web.HTML.HTMLInputElement as HTMLInputElement
+import Web.UIEvent.InputEvent as InputEvent
+import Web.UIEvent.KeyboardEvent (KeyboardEvent)
+import Web.UIEvent.KeyboardEvent as KeyboardEvent
 
 type GenericUIView children msg =
   { nerves :: Array (Nerve msg)
@@ -249,6 +254,13 @@ n nerve = UI (mempty :: GenericUIView ch msg) { nerves = [ nerve ] } mempty
 onClick :: forall ch msg. Monoid ch => msg -> GenericUI ch msg Unit
 onClick msg = n $ OnClick msg
 
+onPress :: forall ch msg. Monoid ch => (KeyboardEvent -> msg) -> GenericUI ch msg Unit
+onPress msg = n $ OnPress msg
+
+-- | https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
+onKey :: forall ch msg. Monoid ch => String -> msg -> GenericUI ch msg Unit
+onKey key msg = n $ OnKey key msg
+
 m :: forall ch msg. Monoid ch => Meat -> GenericUI ch msg Unit
 m meat = UI (mempty :: GenericUIView ch msg) { meat = [ meat ] } mempty
 
@@ -320,6 +332,9 @@ innerShadow cfg = m $ InnerShadow $ ShadowCfg cfg
 
 font :: forall ch msg. Monoid ch => String -> GenericUI ch msg Unit
 font f = m $ Font f
+
+fontColor :: forall ch msg. Monoid ch => Color -> GenericUI ch msg Unit
+fontColor c = m $ FontColor c
 
 fontSize :: forall ch msg. Monoid ch => Int -> GenericUI ch msg Unit
 fontSize f = m $ FontSize f
@@ -401,7 +416,10 @@ instance Renderable Side where
     Bottom -> "bottom"
     Left -> "left"
 
-data Nerve msg = OnClick msg
+data Nerve msg
+  = OnClick msg
+  | OnPress (KeyboardEvent -> msg)
+  | OnKey String msg
 
 newtype WiredNerves = WiredNerves (Object (Event -> Effect Unit))
 
@@ -415,6 +433,12 @@ instance Monoid WiredNerves where
 wireNerve :: forall msg. (msg -> Effect Unit) -> Nerve msg -> WiredNerves
 wireNerve fire nerve = WiredNerves $ case nerve of
   OnClick msg -> Object.singleton "click" $ \_ev -> fire msg
+  OnPress msg -> Object.singleton "keypress" $ \ev -> case KeyboardEvent.fromEvent ev of
+    Nothing -> pure unit
+    Just keyboardEvent -> fire $ msg keyboardEvent
+  OnKey key msg -> Object.singleton "keypress" $ \ev -> case KeyboardEvent.fromEvent ev of
+    Just keyboardEvent | KeyboardEvent.code keyboardEvent == key -> fire msg
+    _ -> pure unit
 
 type View msg =
   { nerves :: Array (Nerve msg)

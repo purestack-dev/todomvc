@@ -7,8 +7,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     spago-nix.url = "github:purestack-dev/spago-nix";
+    project-m36-rest = {
+      url = "github:purestack-dev/project-m36-rest";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
-  outputs = { self, nixpkgs, flake-utils, purescript-overlay, spago-nix }:
+  outputs = { self, nixpkgs, flake-utils, purescript-overlay, spago-nix
+    , project-m36-rest }:
     let supportedSystems = flake-utils.lib.defaultSystems;
     in flake-utils.lib.eachSystem supportedSystems (system:
       let
@@ -29,7 +34,10 @@
                 "${pkgs.spago}/bin/spago bundle-app --watch --main Backend --to backend.js";
               is_tty = true;
             };
-            bun = { command = "${pkgs.bun}/bin/bun run --watch backend.js"; };
+            bun.command = "${pkgs.bun}/bin/bun run --watch backend.js";
+            project-m36.command = "${
+                project-m36-rest.packages.${system}.default
+              }/bin/project-m36-rest";
           };
         });
       in {

@@ -20,10 +20,7 @@ module PureStack.Server
   , serveQuery
   , class ParsePathPiece
   , parsePathPiece
-  , class FromHeaders
-  , fromHeaders
-  , class FromHeader
-  , fromHeader
+  , module PureStack.Route
   ) where
 
 import Prelude
@@ -244,6 +241,18 @@ instance EncodeJson (Record row) => ToResponse (Record row) where
 instance ToResponse Response where
   toResponse resp = resp
 
+instance
+  ( ToResponse resp
+  , ToHeaders headers headersList
+  , RowToList headers headersList
+  ) =>
+  ToResponse (Headers (Record headers) resp) where
+  toResponse (Headers headers resp) =
+    let
+      Response initResp = toResponse resp
+    in
+      Response initResp { headers = Object.union (toHeaders @headers @headersList headers) initResp.headers }
+
 class FromRequest r where
   fromRequest :: Request -> Aff (Maybe r)
 
@@ -282,56 +291,6 @@ instance
       headers <- fromHeaders @headers @headersList (Request.headers req)
       r' <- r
       pure $ Headers (Builder.buildFromScratch headers) r'
-
-class FromHeader t where
-  fromHeader :: String -> Maybe t
-
-instance FromHeader Cookie where
-  fromHeader = Cookie.parse >>> case _ of
-    Left _ -> Nothing
-    Right x -> Just x
-
-instance FromHeader String where
-  fromHeader = Just
-
-instance FromHeader Int where
-  fromHeader = Int.fromString
-
-class FromHeaders :: Row Type -> RowList Type -> Constraint
-class FromHeaders row list | list -> row where
-  fromHeaders :: Object String -> Maybe (Builder {} (Record row))
-
-instance FromHeaders () RowList.Nil where
-  fromHeaders _ = Just $ identity
-
-instance
-  ( FromHeader t
-  , IsSymbol field
-  , FromHeaders tail rest
-  , Row.Cons field (Maybe t) tail row
-  , Row.Lacks field tail
-  ) =>
-  FromHeaders row (RowList.Cons field (Maybe t) rest) where
-  fromHeaders headers = do
-    r <- fromHeaders @tail @rest headers
-    case Object.lookup (reflectSymbol @field Proxy) headers of
-      Nothing -> pure $ Builder.insert (Proxy @field) Nothing <<< r
-      Just t -> do
-        v <- fromHeader t
-        pure $ Builder.insert (Proxy @field) (Just v) <<< r
-
-else instance
-  ( FromHeader t
-  , IsSymbol field
-  , FromHeaders tail rest
-  , Row.Cons field t tail row
-  , Row.Lacks field tail
-  ) =>
-  FromHeaders row (RowList.Cons field t rest) where
-  fromHeaders headers = do
-    t <- Object.lookup (reflectSymbol @field Proxy) headers >>= fromHeader
-    r <- fromHeaders @tail @rest headers
-    pure $ Builder.insert (Proxy @field) t <<< r
 
 class ParsePathPiece t where
   parsePathPiece :: String -> Maybe t
