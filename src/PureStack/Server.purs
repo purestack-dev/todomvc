@@ -140,7 +140,7 @@ else instance (ToResponse resp, MethodName (meth Unit resp)) => ServeRoute (meth
     pure $ \(Nt nt) handler _middlewares _req -> do
       resp <- nt handler
       pure $ toResponse resp
-else instance (FromRequest req, MethodName (meth resp Unit)) => ServeRoute (meth resp Unit) (req -> m Unit) middlewares m where
+else instance (FromRequest req, MethodName (meth resp Unit)) => ServeRoute (meth req Unit) (req -> m Unit) middlewares m where
   serveRoute { path, verb } = do
     assert $ verb == methodName @(meth resp Unit)
     assert $ path == []
@@ -236,10 +236,16 @@ class ToResponse r where
   toResponse :: r -> Response
 
 instance EncodeJson (Record row) => ToResponse (Record row) where
-  toResponse rec = Response { body: JsonResponseBody $ encodeJson rec, status: 200, statusText: "OK", headers: Object.empty }
+  toResponse rec = toResponse $ encodeJson rec
+
+instance EncodeJson t => ToResponse (Array t) where
+  toResponse = encodeJson >>> toResponse
 
 instance ToResponse Response where
   toResponse resp = resp
+
+instance ToResponse Json where
+  toResponse body = Response { body: JsonResponseBody body, status: 200, statusText: "OK", headers: Object.empty }
 
 instance
   ( ToResponse resp

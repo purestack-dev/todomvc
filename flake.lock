@@ -91,11 +91,11 @@
         "stacklock2nix": "stacklock2nix"
       },
       "locked": {
-        "lastModified": 1750766736,
-        "narHash": "sha256-xSWxfDWjVhRNNyAg7iqv5yEZ+Ofad3YM9gneFO1M0Xg=",
+        "lastModified": 1751636615,
+        "narHash": "sha256-8svgD2LdlamTqKqCkdf3ROQLckvnXP+vx3M5a57Kl5U=",
         "owner": "purestack-dev",
         "repo": "project-m36-rest",
-        "rev": "b137dc5eb0ebfe7071e758b0011cddc18a2eb087",
+        "rev": "c3a0331d62f7f5c9d90012d533e5713095a5fb4e",
         "type": "github"
       },
       "original": {

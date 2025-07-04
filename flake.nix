@@ -26,12 +26,12 @@
           processes = {
             spago-frontend = {
               command =
-                "${pkgs.spago}/bin/spago bundle-app --watch --main Frontend --to frontend.js";
+                "${pkgs.spago}/bin/spago bundle-app --watch --main Frontend --source-maps --to frontend.js";
               is_tty = true;
             };
             spago-backend = {
               command =
-                "${pkgs.spago}/bin/spago bundle-app --watch --main Backend --to backend.js";
+                "${pkgs.spago}/bin/spago bundle-app --watch --main Backend --source-maps --to backend.js";
               is_tty = true;
             };
             bun.command = "${pkgs.bun}/bin/bun run --watch backend.js";

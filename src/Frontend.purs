@@ -52,4 +52,3 @@ url = case URL.fromString "localhost" of
 
 x = client @API url
 
-foo = x.deep.something

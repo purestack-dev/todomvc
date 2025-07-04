@@ -22,7 +22,7 @@ import Prelude
 import PureStack.Route
 
 import Control.Alternative (class Alternative, empty)
-import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson)
+import Data.Argonaut (class DecodeJson, class EncodeJson, Json, JsonDecodeError, decodeJson, encodeJson)
 import Data.ArrayBuffer.Types (ArrayBuffer)
 import Data.Either (Either(..))
 import Data.Map as Map
@@ -225,12 +225,26 @@ instance (ToRequest req, RowToList headers headersList, ToHeaders headers header
 class FromResponse r where
   fromResponse :: Response -> Aff (Maybe r)
 
+instance FromResponse Json where
+  fromResponse resp = map (Just <<< foreignToJson) (Response.json resp)
+
+instance DecodeJson x => FromResponse (Array x) where
+  fromResponse resp = do
+    fromResponse resp <#> case _ of
+      Nothing -> Nothing
+      Just json ->
+        case decodeJson json of
+          Right x -> Just x
+          Left _ -> Nothing
+
 instance DecodeJson (Record row) => FromResponse (Record row) where
   fromResponse resp = do
-    json <- map foreignToJson (Response.json resp)
-    pure $ case decodeJson json of
-      Right x -> Just x
-      Left _ -> Nothing
+    fromResponse resp <#> case _ of
+      Nothing -> Nothing
+      Just json ->
+        case decodeJson json of
+          Right x -> Just x
+          Left _ -> Nothing
 
 instance FromResponse Unit where
   fromResponse _ = pure $ Just unit

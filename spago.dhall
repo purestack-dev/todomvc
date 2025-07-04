@@ -15,6 +15,7 @@
   , "effect"
   , "either"
   , "enums"
+  , "exceptions"
   , "ezfetch"
   , "foldable-traversable"
   , "foreign"

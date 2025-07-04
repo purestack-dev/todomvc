@@ -65,11 +65,13 @@ import Data.Set as Set
 import Data.Traversable (traverse)
 import Data.Tuple.Nested (type (/\), (/\))
 import Data.URL (URL, addSegment)
+import Debug (traceM)
 import Effect.Aff (Aff, bracket, error, throwError)
 import Effect.Aff.HTTP (Method(..), fetch)
 import Effect.Aff.HTTP.Request as Request
 import Effect.Aff.HTTP.Response (Response)
 import Effect.Aff.HTTP.Response as Response
+import Effect.Class.Console (log)
 import Foreign (Foreign, unsafeFromForeign, unsafeToForeign)
 import Foreign.Object (Object)
 import Foreign.Object as Object
@@ -92,7 +94,7 @@ data Expr
 
 instance EncodeJson Expr where
   encodeJson = case _ of
-    Lit l -> l
+    Lit l -> encodeJson l
     Join x y -> encodeJson { join: [ x, y ] }
     Union x y -> encodeJson { union: [ x, y ] }
     Project proj expr -> encodeJson { proj: { proj: proj, expr: expr } }
@@ -116,8 +118,14 @@ class LiteralRelation r fields | r -> fields where
 instance (RowList.RowToList fields fields', Relatable fields fields') => LiteralRelation (Array (Record fields)) fields where
   lit r = Rel $ Lit $ encodeJson { lit: { attrs: attributeTypes @fields @fields', vals: encodeRelation @fields @fields' <$> r } }
 
-else instance (LiteralRelation (Record fields) fields, Newtype r (Record fields)) => LiteralRelation r fields where
-  lit = unwrap >>> lit
+else instance
+  ( Newtype r (Record fields)
+  , LiteralRelation (Array (Record field)) fields
+  , RowToList fields fields'
+  , Relatable fields fields'
+  ) =>
+  LiteralRelation (Array r) fields where
+  lit = map unwrap >>> lit
 
 rel :: forall @rel fields. Newtype rel (Record fields) => RelVar rel => Rel fields
 rel = Rel $ RelationVariable (relVar @rel)
@@ -474,7 +482,7 @@ define
   => Transaction Unit
 define = Transaction $ ReaderT $ \{ conn: Connection c, sess } -> do
   fetch POST (c `addSegment` "transaction" `addSegment` sessionString sess)
-    { body: Request.json { define: { name: relVar @rel, attrs: Object.fromFoldable (attributeTypes @fields @fields') } } }
+    { body: Request.json $ jsonToForeign $ encodeJson { define: { name: relVar @rel, attrs: attributeTypes @fields @fields' } } }
     >>= Response.guardStatusOk
   pure unit
 
@@ -485,8 +493,9 @@ insert
   => Rel fields
   -> Transaction Unit
 insert (Rel r) = Transaction $ ReaderT $ \{ conn: Connection c, sess } -> do
+  traceM $ jsonToForeign $ encodeJson { insert: { name: relVar @rel, rel: r } }
   fetch POST (c `addSegment` "transaction" `addSegment` sessionString sess)
-    { body: Request.json { insert: { name: relVar @rel, rel: jsonToForeign (encodeJson r) } } }
+    { body: Request.json $ jsonToForeign $ encodeJson { insert: { name: relVar @rel, rel: r } } }
     >>= Response.guardStatusOk
   pure unit
 
@@ -498,7 +507,7 @@ query
   -> Transaction (Array (Record fields))
 query (Rel r) = Transaction $ ReaderT $ \{ conn: Connection c, sess } -> do
   resp <- fetch POST (c `addSegment` "transaction" `addSegment` sessionString sess)
-    { body: Request.json { query: jsonToForeign (encodeJson r) } }
+    { body: Request.json $ jsonToForeign $ encodeJson { query: r } }
   Response.guardStatusOk resp
   j <- json resp
   case decodeRelation @fields @fields' j of
@@ -510,7 +519,8 @@ decodeRelation
    . BuildRelation fields fields'
   => Json
   -> Either JsonDecodeError (Array (Record fields))
-decodeRelation j = decodeRelationJson j >>= traverse (decodeRelationFromObject @fields @fields')
+decodeRelation j = do
+  decodeRelationJson j >>= traverse (decodeRelationFromObject @fields @fields')
 
 jsonToForeign :: Json -> Foreign
 jsonToForeign = unsafeCoerce
