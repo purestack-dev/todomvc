@@ -38,6 +38,8 @@
             project-m36.command = "${
                 project-m36-rest.packages.${system}.default
               }/bin/project-m36-rest";
+            proxy.command =
+              "${pkgs.reproxy}/bin/reproxy -l=localhost:3001 --static.enabled --static.rule='*,^/api/(.*),http://localhost:3000/$1' --assets.location=. --assets.spa";
           };
         });
       in {

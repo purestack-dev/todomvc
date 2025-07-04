@@ -5,12 +5,15 @@ import Prelude
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
+import Effect.Aff (Aff, launchAff_)
+import Effect.Class (liftEffect)
 import Effect.Console (log)
 import Effect.Ref as Ref
 import Foreign.Object as Object
 import Literals.Undefined (undefined)
 import Plum.View (GenericUI(..), UI, grow)
 import Snabbdom as Snabbdom
+import Unsafe.Coerce (unsafeCoerce)
 import Untagged.Union (asOneOf)
 import Web.DOM.NonElementParentNode (getElementById) as Web
 import Web.HTML (window) as Web
@@ -18,8 +21,8 @@ import Web.HTML.HTMLDocument (toNonElementParentNode) as Web
 import Web.HTML.Window (document) as Web
 
 type Plum msg model =
-  { init :: Effect model
-  , update :: msg -> model -> Effect model
+  { init :: (Aff msg -> Effect Unit) -> Effect model
+  , update :: (Aff msg -> Effect Unit) -> msg -> model -> Effect model
   , view :: model -> UI msg Unit
   }
 
@@ -28,25 +31,36 @@ run id plum = do
   Web.window >>= Web.document >>= Web.getElementById id <<< Web.toNonElementParentNode >>= case _ of
     Just element -> do
       let node = Snabbdom.toVNode element
+      modelRef <- Ref.new { model: unsafeCoerce undefined, lastNode: node }
       patch <- Snabbdom.init
-      initModel <- plum.init
-      modelRef <- Ref.new { model: initModel, lastNode: node }
       let
+        fire =
+          ( \msg -> do
+              log "in"
+              { model: m, lastNode } <- Ref.read modelRef
+              m_ <- plum.update
+                ( \aff ->
+                    launchAff_
+                      ( do
+                          msg' <- aff
+                          liftEffect $ fire msg'
+                          pure unit
+                      )
+                )
+                msg
+                m
+              node' <- view m_
+              newNode <- patch lastNode node'
+              Ref.write { model: m_, lastNode: newNode } modelRef
+              pure unit
+          )
         view model = do
           let UI { children } _ = plum.view model
           case Array.uncons children of
             Just { head: child } -> do
               let
                 { node, style } = grow
-                  ( \msg -> do
-                      log "in"
-                      { model: m, lastNode } <- Ref.read modelRef
-                      m_ <- plum.update msg m
-                      node <- view m_
-                      newNode <- patch lastNode node
-                      Ref.write { model: m_, lastNode: newNode } modelRef
-                      pure unit
-                  )
+                  fire
                   child
               pure $
                 Snabbdom.h "div"
@@ -75,6 +89,15 @@ run id plum = do
                 }
                 []
                 (asOneOf undefined)
+      initModel <- plum.init
+        ( \aff ->
+            launchAff_
+              ( do
+                  msg' <- aff
+                  liftEffect $ fire msg'
+                  pure unit
+              )
+        )
       newNode <- view initModel
       newNode_ <- patch node newNode
       log "patched"
@@ -84,3 +107,4 @@ run id plum = do
 
 outerStyle :: String
 outerStyle = "html,body{height:100%;padding:0;margin:0;}"
+

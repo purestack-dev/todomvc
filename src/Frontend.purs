@@ -19,14 +19,18 @@ type Model = { newTodo :: String, todos :: Array String }
 data Msg
   = UpdateNewTodo String
   | AddNewTodo
+  | TodoAdded
 
 main :: Effect Unit
 main = do
   Plum.run @Model @Msg "plum"
-    { init: pure { newTodo: "", todos: [] }
-    , update: \msg model -> case msg of
+    { init: \_runMsg -> pure { newTodo: "", todos: [] }
+    , update: \runMsg msg model -> case msg of
         UpdateNewTodo newTodo -> pure model { newTodo = newTodo }
-        AddNewTodo -> pure model { newTodo = "", todos = model.newTodo : model.todos }
+        AddNewTodo -> do
+          runMsg $ api.createTodo (TodoItem { text: model.newTodo, done: false }) $> TodoAdded
+          pure model { newTodo = "", todos = model.newTodo : model.todos }
+        TodoAdded -> pure model
     , view: \model -> column do
         font "sans-serif"
 
@@ -46,9 +50,9 @@ main = do
             text todo mempty
     }
 
-url = case URL.fromString "localhost" of
+url = case URL.fromString "http://localhost" of
   Just x -> x
   Nothing -> unsafeCoerce unit
 
-x = client @API url
+api = client @API url
 
