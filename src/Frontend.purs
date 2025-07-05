@@ -7,30 +7,36 @@ import Prim
 
 import Data.Array ((:))
 import Data.Foldable (for_)
-import Data.Maybe (Maybe(..))
 import Data.URL as URL
 import Effect (Effect)
 import Plum as Plum
 import PureStack.Client (client)
-import Unsafe.Coerce (unsafeCoerce)
 
-type Model = { newTodo :: String, todos :: Array String }
+type Model = { newTodo :: String, todos :: Array TodoItem }
 
 data Msg
   = UpdateNewTodo String
+  | SetTodos (Array TodoItem)
   | AddNewTodo
   | TodoAdded
 
 main :: Effect Unit
 main = do
+  origin <- Plum.currentOrigin
+  let api = getApi (origin `URL.addSegment` "api")
   Plum.run @Model @Msg "plum"
-    { init: \_runMsg -> pure { newTodo: "", todos: [] }
+    { init: \runMsg -> do
+        runMsg $ SetTodos <$> api.getTodos
+        pure { newTodo: "", todos: [] }
     , update: \runMsg msg model -> case msg of
         UpdateNewTodo newTodo -> pure model { newTodo = newTodo }
         AddNewTodo -> do
           runMsg $ api.createTodo (TodoItem { text: model.newTodo, done: false }) $> TodoAdded
-          pure model { newTodo = "", todos = model.newTodo : model.todos }
-        TodoAdded -> pure model
+          pure model
+        TodoAdded -> do
+          runMsg $ SetTodos <$> api.getTodos
+          pure model
+        SetTodos todos -> pure model { todos = todos }
     , view: \model -> column do
         font "sans-serif"
 
@@ -46,13 +52,9 @@ main = do
 
             onKey "Enter" AddNewTodo
 
-          for_ model.todos $ \todo -> do
-            text todo mempty
+          for_ model.todos $ \(TodoItem todo) -> do
+            text todo.text mempty
     }
 
-url = case URL.fromString "http://localhost" of
-  Just x -> x
-  Nothing -> unsafeCoerce unit
-
-api = client @API url
+getApi = client @API
 

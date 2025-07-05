@@ -1,13 +1,16 @@
-module Plum (Plum, run) where
+module Plum (Plum, run, currentOrigin) where
 
 import Prelude
 
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
+import Data.URL (URL)
+import Data.URL as URL
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Console (log)
+import Effect.Exception (throw)
 import Effect.Ref as Ref
 import Foreign.Object as Object
 import Literals.Undefined (undefined)
@@ -17,8 +20,10 @@ import Unsafe.Coerce (unsafeCoerce)
 import Untagged.Union (asOneOf)
 import Web.DOM.NonElementParentNode (getElementById) as Web
 import Web.HTML (window) as Web
+import Web.HTML.Event.EventTypes (invalid)
 import Web.HTML.HTMLDocument (toNonElementParentNode) as Web
-import Web.HTML.Window (document) as Web
+import Web.HTML.Location as Location
+import Web.HTML.Window (document, location) as Web
 
 type Plum msg model =
   { init :: (Aff msg -> Effect Unit) -> Effect model
@@ -108,3 +113,9 @@ run id plum = do
 outerStyle :: String
 outerStyle = "html,body{height:100%;padding:0;margin:0;}"
 
+currentOrigin :: Effect URL
+currentOrigin = do
+  s <- Web.window >>= Web.location >>= Location.origin
+  case URL.fromString s of
+    Nothing -> throw "window.location.origin returned an invalid url"
+    Just url -> pure url
